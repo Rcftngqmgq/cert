@@ -161,8 +161,38 @@ fi
 if [[ -f '/etc/tuic/tuic.json' ]]; then
 blue "检测到Tuic代理协议，如果你安装了甬哥的Tuic脚本，请在Tuic脚本执行申请/变更证书，此证书将自动应用"
 fi
-if [[ -f '/usr/bin/x-ui' ]]; then
-blue "检测到x-ui（xray代理协议），如果你安装了甬哥的x-ui脚本，开启tls选项，此证书将自动应用"
+panelFlagFile="/home/web/certs/panel_bind.flag"
+if [[ ! -f "$panelFlagFile" ]]; then
+runningXUI=$(pgrep -f "3x-ui|x-ui-yg|x-ui")
+if [[ -n "$runningXUI" ]]; then
+read -rp "检测到 XUI 面板正在运行，是否为其绑定此证书? (y/n): " setPanel
+if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then
+if [[ -f '/usr/bin/3x-ui' && -f '/etc/3x-ui/3x-ui.db' ]]; then
+sqlite3 /etc/3x-ui/3x-ui.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
+systemctl restart 3x-ui
+blue "3x-ui 证书已绑定并重启服务"
+fi
+if [[ -f '/usr/bin/x-ui-yg' && -f '/etc/x-ui-yg/x-ui-yg.db' ]]; then
+sqlite3 /etc/x-ui-yg/x-ui-yg.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
+systemctl restart x-ui-yg
+blue "x-ui-yg 证书已绑定并重启服务"
+fi
+if [[ -f '/usr/bin/x-ui' && -f '/etc/x-ui/x-ui.db' ]]; then
+sqlite3 /etc/x-ui/x-ui.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
+systemctl restart x-ui
+blue "x-ui 证书已绑定并重启服务"
+fi
+echo "bound" > "$panelFlagFile"
+else
+echo "unbound" > "$panelFlagFile"
+LOGI "跳过面板绑定"
+fi
+else
+echo "unbound" > "$panelFlagFile"
+LOGI "未检测到 XUI 面板运行，首次绑定将跳过"
+fi
+else
+blue "检测到证书已存在面板绑定状态文件，后续更新将保持原有绑定状态，不自动操作"
 fi
 if [[ -f '/etc/s-box/sb.json' ]]; then
 blue "检测到Sing-box内核代理，如果你安装了甬哥的Sing-box脚本，请在Sing-box脚本执行申请/变更证书，此证书将自动应用"
