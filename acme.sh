@@ -152,15 +152,6 @@ yellow "密钥文件key路径如下，可直接复制"
 green "/home/web/certs/key.pem"
 ym=`bash ~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}'`
 echo $ym > /home/web/certs/ca.log
-if [[ -f '/etc/hysteria/config.json' ]]; then
-blue "检测到Hysteria-1代理协议，如果你安装了甬哥的Hysteria脚本，请在Hysteria脚本执行申请/变更证书，此证书将自动应用"
-fi
-if [[ -f '/etc/caddy/Caddyfile' ]]; then
-blue "检测到Naiveproxy代理协议，如果你安装了甬哥的Naiveproxy脚本，请在Naiveproxy脚本执行申请/变更证书，此证书将自动应用"
-fi
-if [[ -f '/etc/tuic/tuic.json' ]]; then
-blue "检测到Tuic代理协议，如果你安装了甬哥的Tuic脚本，请在Tuic脚本执行申请/变更证书，此证书将自动应用"
-fi
 panelFlagFile="/home/web/certs/panel_bind.flag"
 if [[ ! -f "$panelFlagFile" ]]; then
 runningXUI=$(pgrep -f "3x-ui|x-ui-yg|x-ui")
@@ -194,12 +185,21 @@ fi
 else
 blue "检测到证书已存在面板绑定状态文件，后续更新将保持原有绑定状态，不自动操作"
 fi
+if [[ -f '/etc/hysteria/config.json' ]]; then
+blue "检测到Hysteria-1代理协议，如果你安装了甬哥的Hysteria脚本，请在Hysteria脚本执行申请/变更证书，此证书将自动应用"
+fi
+if [[ -f '/etc/caddy/Caddyfile' ]]; then
+blue "检测到Naiveproxy代理协议，如果你安装了甬哥的Naiveproxy脚本，请在Naiveproxy脚本执行申请/变更证书，此证书将自动应用"
+fi
+if [[ -f '/etc/tuic/tuic.json' ]]; then
+blue "检测到Tuic代理协议，如果你安装了甬哥的Tuic脚本，请在Tuic脚本执行申请/变更证书，此证书将自动应用"
+fi
 if [[ -f '/etc/s-box/sb.json' ]]; then
 blue "检测到Sing-box内核代理，如果你安装了甬哥的Sing-box脚本，请在Sing-box脚本执行申请/变更证书，此证书将自动应用"
 fi
 else
 bash ~/.acme.sh/acme.sh --uninstall >/dev/null 2>&1
-rm -rf /home/web/certs
+#rm -rf /home/web/certs
 rm -rf ~/.acme.sh acme.sh
 uncronac
 red "遗憾，域名证书申请失败，建议如下："
