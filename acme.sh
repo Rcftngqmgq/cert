@@ -276,40 +276,23 @@ ab="请选择托管域名解析服务商：\n1.ACME CF API Token (推荐)\n2.ACM
 readp "$ab" cd
 case "$cd" in 
 1 )
-# acme.sh + API Token 原逻辑不变
-readp "请复制Cloudflare的API Token：" CF_Token
-yellow "注意：此 Token 需包含 Zone.Zone:Read 和 Zone.DNS:Edit 权限"
+readp "请输入Cloudflare API Token：" CF_Token
 export CF_Token="$CF_Token"
-readp "请复制Cloudflare的Zone_ID：" CF_Zone_ID
-yellow "注意：Zone_ID 对应你的主域名，例如 ygkkk.eu.org"
-export CF_Zone_ID="$CF_Zone_ID"
 
-_check_cf_token() {
-response=$(curl -s -H "Authorization: Bearer $CF_Token" \
--H "Content-Type: application/json" \
-"https://api.cloudflare.com/client/v4/user/tokens/verify")
-if ! echo "$response" | grep -q '"status":"active"'; then
-red "Cloudflare Token 无效或权限不足！"
-yellow "请检查：\n1. Token 是否过期\n2. 是否包含 Zone.DNS:Edit 权限"
+# 直接申请证书（IP匹配性已在外部检查过）
+if [[ -n "$v4" ]]; then
+~/.acme.sh/acme.sh --issue --dns dns_cf -d "$ym" -k ec-256 --server letsencrypt || {
+red "证书申请失败！请检查：\n1. API Token权限\n2. 域名DNS未生效\n3. 网络连接"
 exit 1
-fi
 }
-_check_cf_token
-
-existing=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CF_Zone_ID/dns_records?name=$ym" \
--H "Authorization: Bearer $CF_Token" \
--H "Content-Type: application/json")
-if echo "$existing" | grep -q '"result":\[\]'; then
-yellow "二级域名 $ym 在该 Zone 下不存在，acme.sh 会自动添加 TXT 记录"
-fi
-
-if [[ $domainIP = $v4 ]]; then
-CF_Token="$CF_Token" CF_Zone_ID="$CF_Zone_ID" \
-bash ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${ym} -k ec-256 --server letsencrypt --insecure --force
-fi
-if [[ $domainIP = $v6 ]]; then
-CF_Token="$CF_Token" CF_Zone_ID="$CF_Zone_ID" \
-bash ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${ym} -k ec-256 --server letsencrypt --listen-v6 --insecure --force
+elif [[ -n "$v6" ]]; then
+~/.acme.sh/acme.sh --issue --dns dns_cf -d "$ym" -k ec-256 --server letsencrypt --listen-v6 || {
+red "证书申请失败！请检查：\n1. API Token权限\n2. 域名DNS未生效\n3. 网络连接"
+exit 1
+}
+else
+red "错误：未检测到服务器IPv4/IPv6地址！"
+exit 1
 fi
 ;;
 2 )
