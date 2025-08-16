@@ -152,36 +152,25 @@ yellow "密钥文件key路径如下，可直接复制"
 green "/home/web/certs/key.pem"
 ym=`bash ~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}'`
 echo $ym > /home/web/certs/ca.log
+# 成功安装证书后提示用户设置面板路径
 panelFlagFile="/home/web/certs/panel_bind.flag"
 if [[ ! -f "$panelFlagFile" ]]; then
-runningXUI=$(pgrep -f "3x-ui|x-ui-yg|x-ui")
-if [[ -n "$runningXUI" ]]; then
-read -rp "检测到 XUI 面板正在运行，是否为其绑定此证书? (y/n): " setPanel
-if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then
-if [[ -f '/usr/bin/3x-ui' && -f '/etc/3x-ui/3x-ui.db' ]]; then
-sqlite3 /etc/3x-ui/3x-ui.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
-systemctl restart 3x-ui
-blue "3x-ui 证书已绑定并重启服务"
-fi
-if [[ -f '/usr/bin/x-ui-yg' && -f '/etc/x-ui-yg/x-ui-yg.db' ]]; then
-sqlite3 /etc/x-ui-yg/x-ui-yg.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
-systemctl restart x-ui-yg
-blue "x-ui-yg 证书已绑定并重启服务"
-fi
-if [[ -f '/usr/bin/x-ui' && -f '/etc/x-ui/x-ui.db' ]]; then
-sqlite3 /etc/x-ui/x-ui.db "UPDATE inbounds SET cert_file='/home/web/certs/cert.pem', key_file='/home/web/certs/key.pem' WHERE enable_tls=1;"
+webCertFile="/home/web/certs/cert.pem"
+webKeyFile="/home/web/certs/key.pem"
+if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
+if [[ -f "/usr/local/x-ui/x-ui" ]]; then
+/usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+systemctl restart x-ui
+blue "x-ui 证书已绑定并重启服务"
+elif [[ -f "/usr/bin/x-ui" ]]; then
+/usr/bin/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
 systemctl restart x-ui
 blue "x-ui 证书已绑定并重启服务"
 fi
+else
+red "证书或密钥文件不存在，无法绑定"
+fi
 echo "bound" > "$panelFlagFile"
-else
-echo "unbound" > "$panelFlagFile"
-LOGI "跳过面板绑定"
-fi
-else
-echo "unbound" > "$panelFlagFile"
-LOGI "未检测到 XUI 面板运行，首次绑定将跳过"
-fi
 else
 blue "检测到证书已存在面板绑定状态文件，后续更新将保持原有绑定状态，不自动操作"
 fi
